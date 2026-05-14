@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DevOpsHub</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 DevOpsHub - Feedback Aggregator</h1>
+            <p>Share your feedback and suggestions with us</p>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <h3>Total Messages</h3>
+                <p class="stat-number"><%= messageCount %></p>
+            </div>
+            <div class="stat-card">
+                <h3>Total Visits</h3>
+                <p class="stat-number"><%= visitCount %></p>
+            </div>
+        </div>
+
+        <form id="feedbackForm" class="form-container">
+            <div class="form-group">
+                <label for="name">Name:</label>
+                <input type="text" id="name" name="name" required placeholder="Enter your name">
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email:</label>
+                <input type="email" id="email" name="email" required placeholder="your@email.com">
+            </div>
+
+            <div class="form-group">
+                <label for="message">Message:</label>
+                <textarea id="message" name="message" required placeholder="Write your message..."></textarea>
+            </div>
+
+            <button type="submit" class="btn-submit">Submit Feedback</button>
+        </form>
+
+        <div id="response" class="response-message"></div>
+
+        <div class="footer">
+            <p>💡 <strong>Your feedback helps us improve!</strong></p>
+            <p><a href="http://localhost:3002">View Dashboard →</a></p>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('feedbackForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            const message = document.getElementById('message').value;
+            const responseDiv = document.getElementById('response');
+
+            try {
+                const response = await fetch('/submit-message', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `name=${encodeURIComponent(name)}&email=${encodeURIComponent(email)}&message=${encodeURIComponent(message)}`
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    responseDiv.className = 'response-message success';
+                    responseDiv.textContent = '✓ ' + data.message;
+                    document.getElementById('feedbackForm').reset();
+                    setTimeout(() => location.reload(), 2000);
+                } else {
+                    responseDiv.className = 'response-message error';
+                    responseDiv.textContent = '✗ ' + data.message;
+                }
+            } catch (error) {
+                responseDiv.className = 'response-message error';
+                responseDiv.textContent = '✗ Submission error';
+            }
+        });
+    </script>
+</body>
+</html>
