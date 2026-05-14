@@ -5,42 +5,43 @@ const bodyParser = require('body-parser');
 const app = express();
 const PORT = 3001;
 
-// إعداد عميل Redis
+// Redis Client Setup
 const redisClient = redis.createClient({
-  host: 'redis',  // اسم الخدمة في Docker
+  host: 'redis',  // Service name defined in Docker
   port: 6379,
   retryStrategy: (options) => {
     if (options.error && options.error.code === 'ECONNREFUSED') {
-      return new Error('فشل الاتصال بـ Redis');
+      return new Error('The server refused the connection to Redis');
     }
     if (options.total_retry_time > 1000 * 60 * 60) {
-      return new Error('انتهت محاولات الاتصال');
+      return new Error('Retry time exhausted');
     }
     if (options.attempt > 10) {
-      return undefined;
+      return undefined; // Stop retrying
     }
+    // Reconnect after a delay
     return Math.min(options.attempt * 100, 3000);
   }
 });
 
-// معالجات الأخطاء
+// Redis Event Listeners (Error Handling)
 redisClient.on('error', (err) => {
-  console.error('خطأ في Redis:', err);
+  console.error('Redis Error:', err);
 });
 
 redisClient.on('connect', () => {
-  console.log('تم الاتصال بـ Redis بنجاح');
+  console.log('Connected to Redis successfully');
 });
 
-// إعدادات التطبيق
+// App Middleware and Settings
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static('public'));
 app.set('view engine', 'ejs');
 
-// الطريق الرئيسي - عرض نموذج الملاحظات
+// Main Route - Display Feedback Form
 app.get('/', async (req, res) => {
   try {
-    // زيادة عداد الزيارات بمقدار 1
+    // Increment page visits by 1
     await new Promise((resolve, reject) => {
       redisClient.incr('page_visits', (err, reply) => {
         if (err) reject(err);
@@ -48,7 +49,7 @@ app.get('/', async (req, res) => {
       });
     });
 
-    // الحصول على عدد الرسائل الكلي
+    // Get total message count
     const messageCount = await new Promise((resolve, reject) => {
       redisClient.llen('messages', (err, reply) => {
         if (err) reject(err);
@@ -56,7 +57,7 @@ app.get('/', async (req, res) => {
       });
     });
 
-    // الحصول على عدد الزيارات
+    // Get total visit count
     const visitCount = await new Promise((resolve, reject) => {
       redisClient.get('page_visits', (err, reply) => {
         if (err) reject(err);
@@ -64,31 +65,31 @@ app.get('/', async (req, res) => {
       });
     });
 
-    // إرسال البيانات إلى القالب
+    // Render data to the template
     res.render('message-form', { 
       messageCount: messageCount,
       visitCount: visitCount
     });
   } catch (err) {
-    console.error('خطأ:', err);
-    res.status(500).send('خطأ في استرجاع البيانات');
+    console.error('Error fetching data:', err);
+    res.status(500).send('Error retrieving data from the server');
   }
 });
 
-// طريق الإرسال - إضافة رسالة جديدة
+// Submission Route - Add new message
 app.post('/submit-message', async (req, res) => {
   try {
     const { name, email, message } = req.body;
 
-    // التحقق من أن جميع الحقول مملوءة
+    // Check if all fields are filled
     if (!name || !email || !message) {
       return res.status(400).json({ 
         success: false, 
-        message: 'جميع الحقول مطلوبة' 
+        message: 'All fields are required' 
       });
     }
 
-    // إنشاء كائن الرسالة
+    // Create message object
     const messageData = JSON.stringify({
       name: name,
       email: email,
@@ -96,7 +97,7 @@ app.post('/submit-message', async (req, res) => {
       timestamp: new Date().toISOString()
     });
 
-    // إضافة الرسالة إلى Redis
+    // Push message to Redis list
     await new Promise((resolve, reject) => {
       redisClient.rpush('messages', messageData, (err, reply) => {
         if (err) reject(err);
@@ -104,29 +105,29 @@ app.post('/submit-message', async (req, res) => {
       });
     });
 
-    // إرسال رد النجاح
+    // Send success response
     res.json({ 
       success: true, 
-      message: 'تم إرسال الرسالة بنجاح!' 
+      message: 'Message sent successfully!' 
     });
   } catch (err) {
-    console.error('خطأ:', err);
+    console.error('Submission error:', err);
     res.status(500).json({ 
       success: false, 
-      message: 'خطأ في إرسال الرسالة' 
+      message: 'Error saving the message' 
     });
   }
 });
 
-// تشغيل الخادم
+// Start Server
 app.listen(PORT, () => {
-  console.log(`تطبيق المجموعة 1 يعمل على المنفذ ${PORT}`);
+  console.log(`Group 1 App is running on port ${PORT}`);
 });
 
-// إيقاف آمن للتطبيق
+// Graceful Shutdown
 process.on('SIGINT', () => {
   redisClient.quit(() => {
-    console.log('تم إغلاق اتصال Redis');
+    console.log('Redis connection closed');
     process.exit(0);
   });
 });

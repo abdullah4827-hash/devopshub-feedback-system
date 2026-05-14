@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  # خدمة Redis
+  redis:
+    image: redis:7-alpine
+    container_name: devopshub-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - devopshub-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    command: redis-server --appendonly yes
+
+  # التطبيق الأول
+  app1:
+    build:
+      context: ./app1
+      dockerfile: Dockerfile
+    container_name: devopshub-app1
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - devopshub-network
+    restart: unless-stopped
+    volumes:
+      - ./app1:/app
+      - /app/node_modules
+
+  # التطبيق الثاني
+  app2:
+    build:
+      context: ./app2
+      dockerfile: Dockerfile
+    container_name: devopshub-app2
+    ports:
+      - "3002:3002"
+    environment:
+      - NODE_ENV=production
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - devopshub-network
+    restart: unless-stopped
+    volumes:
+      - ./app2:/app
+      - /app/node_modules
+
+networks:
+  devopshub-network:
+    driver: bridge
+
+volumes:
+  redis-data:
+    driver: local

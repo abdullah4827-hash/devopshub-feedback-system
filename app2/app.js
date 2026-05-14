@@ -4,41 +4,41 @@ const redis = require('redis');
 const app = express();
 const PORT = 3002;
 
-// إعداد عميل Redis
+// Redis Client Setup
 const redisClient = redis.createClient({
-  host: 'redis',
+  host: 'redis', // Docker service name
   port: 6379,
   retryStrategy: (options) => {
     if (options.error && options.error.code === 'ECONNREFUSED') {
-      return new Error('فشل الاتصال بـ Redis');
+      return new Error('The server refused the connection to Redis');
     }
     if (options.total_retry_time > 1000 * 60 * 60) {
-      return new Error('انتهت محاولات الاتصال');
+      return new Error('Retry time exhausted');
     }
     if (options.attempt > 10) {
-      return undefined;
+      return undefined; // Stop retrying
     }
     return Math.min(options.attempt * 100, 3000);
   }
 });
 
-// معالجات الأخطاء
+// Redis Event Listeners
 redisClient.on('error', (err) => {
-  console.error('خطأ في Redis:', err);
+  console.error('Redis Error:', err);
 });
 
 redisClient.on('connect', () => {
-  console.log('تم الاتصال بـ Redis بنجاح');
+  console.log('Connected to Redis successfully');
 });
 
-// إعدادات التطبيق
+// App Settings
 app.use(express.static('public'));
 app.set('view engine', 'ejs');
 
-// عرض لوحة التحكم
+// Render Dashboard
 app.get('/', async (req, res) => {
   try {
-    // الحصول على عدد الرسائل
+    // Get total message count
     const messageCount = await new Promise((resolve, reject) => {
       redisClient.llen('messages', (err, reply) => {
         if (err) reject(err);
@@ -46,7 +46,7 @@ app.get('/', async (req, res) => {
       });
     });
 
-    // الحصول على عدد الزيارات
+    // Get total visit count
     const visitCount = await new Promise((resolve, reject) => {
       redisClient.get('page_visits', (err, reply) => {
         if (err) reject(err);
@@ -54,7 +54,7 @@ app.get('/', async (req, res) => {
       });
     });
 
-    // الحصول على آخر 10 رسائل
+    // Get the last 10 messages
     const recentMessages = await new Promise((resolve, reject) => {
       redisClient.lrange('messages', -10, -1, (err, reply) => {
         if (err) reject(err);
@@ -71,12 +71,12 @@ app.get('/', async (req, res) => {
       recentMessages: recentMessages
     });
   } catch (err) {
-    console.error('خطأ:', err);
-    res.status(500).send('خطأ في استرجاع البيانات');
+    console.error('Data retrieval error:', err);
+    res.status(500).send('Error retrieving data from the server');
   }
 });
 
-// نقطة نهاية API للحصول على الإحصائيات
+// API Endpoint for Stats
 app.get('/api/stats', async (req, res) => {
   try {
     const messageCount = await new Promise((resolve, reject) => {
@@ -99,19 +99,19 @@ app.get('/api/stats', async (req, res) => {
       timestamp: new Date().toISOString()
     });
   } catch (err) {
-    res.status(500).json({ error: 'خطأ في استرجاع الإحصائيات' });
+    res.status(500).json({ error: 'Error retrieving stats from API' });
   }
 });
 
-// تشغيل الخادم
+// Start Server
 app.listen(PORT, () => {
-  console.log(`تطبيق لوحة التحكم يعمل على المنفذ ${PORT}`);
+  console.log(`Dashboard App is running on port ${PORT}`);
 });
 
-// إيقاف آمن
+// Graceful Shutdown
 process.on('SIGINT', () => {
   redisClient.quit(() => {
-    console.log('تم إغلاق اتصال Redis');
+    console.log('Redis connection closed');
     process.exit(0);
   });
 });
