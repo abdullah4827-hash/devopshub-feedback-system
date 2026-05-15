@@ -35,6 +35,9 @@ redisClient.on('connect', () => {
 app.use(express.static('public'));
 app.set('view engine', 'ejs');
 
+// Ignore favicon requests
+app.get('/favicon.ico', (req, res) => res.status(204).end());
+
 // Render Dashboard
 app.get('/', async (req, res) => {
   try {

@@ -13,17 +13,6 @@
             <p>Share your feedback and suggestions with us</p>
         </div>
 
-        <div class="stats">
-            <div class="stat-card">
-                <h3>Total Messages</h3>
-                <p class="stat-number"><%= messageCount %></p>
-            </div>
-            <div class="stat-card">
-                <h3>Total Visits</h3>
-                <p class="stat-number"><%= visitCount %></p>
-            </div>
-        </div>
-
         <form id="feedbackForm" class="form-container">
             <div class="form-group">
                 <label for="name">Name:</label>
@@ -71,7 +60,6 @@
                     responseDiv.className = 'response-message success';
                     responseDiv.textContent = '✓ ' + data.message;
                     document.getElementById('feedbackForm').reset();
-                    setTimeout(() => location.reload(), 2000);
                 } else {
                     responseDiv.className = 'response-message error';
                     responseDiv.textContent = '✗ ' + data.message;

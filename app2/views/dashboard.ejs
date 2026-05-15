@@ -16,13 +16,13 @@
         <div class="dashboard-stats">
             <div class="stat-card large">
                 <h3>Total Messages</h3>
-                <p class="stat-number" id="messageCount"><%= messageCount %></p>
+                <p class="stat-number"><%= messageCount %></p>
                 <p class="stat-description">Messages received from users</p>
             </div>
 
             <div class="stat-card large">
                 <h3>Total Visits</h3>
-                <p class="stat-number" id="visitCount"><%= visitCount %></p>
+                <p class="stat-number"><%= visitCount %></p>
                 <p class="stat-description">Number of times the feedback form was accessed</p>
             </div>
         </div>
@@ -52,25 +52,9 @@
         </div>
 
         <div class="footer">
-            <p>🔄 Dashboard updates every 5 seconds</p>
+            <p>🔄 Refresh page to see latest updates</p>
             <p><a href="http://localhost:3001">← Back to feedback form</a></p>
         </div>
     </div>
-
-    <script>
-        // Update stats every 5 seconds
-        setInterval(() => {
-            fetch('/api/stats')
-                .then(res => res.json())
-                .then(data => {
-                    document.getElementById('messageCount').textContent = data.totalMessages;
-                    document.getElementById('visitCount').textContent = data.totalVisits;
-                })
-                .catch(err => console.error('Error:', err));
-        }, 5000);
-
-        // Refresh whole page every 30 seconds
-        setTimeout(() => location.reload(), 30000);
-    </script>
 </body>
 </html>
